@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # ------------------------------------
+  # 1. PostgreSQL Database (Local Simulation for Cloud SQL)
+  # ------------------------------------
+  db:
+    image: postgres:14-alpine
+    container_name: send_me_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: user_send_me
+      POSTGRES_PASSWORD: password_send_me
+      POSTGRES_DB: send_me_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+  # ------------------------------------
+  # 2. FastAPI Backend Service
+  # ------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: send_me_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+    environment:
+      # חיבור ל-DB דרך שם ה-service ב-Docker (db)
+      DATABASE_URL: postgresql://user_send_me:password_send_me@db:5432/send_me_db
+      OPENAI_API_KEY: "YOUR_LOCAL_OPENAI_KEY"
+      FRONTEND_URL: "http://localhost:3000"
+
+  # ------------------------------------
+  # 3. React Frontend Service
+  # ------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: send_me_frontend
+    ports:
+      - "3000:80" # מגיש את Nginx על פורט 3000
+    volumes:
+      # Volumes לטובת Hot Reload (פיתוח מהיר)
+      - ./frontend/src:/usr/share/nginx/html/src
+      - ./frontend/public:/usr/share/nginx/html/public
+    environment:
+      # משתנה סביבה עבור קוד ה-Frontend להתחברות ל-Backend
+      VITE_BACKEND_URL: "http://localhost:8000"
+
+volumes:
+  postgres_data:

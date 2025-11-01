@@ -1,0 +1,82 @@
+/* /send_me_mvp/frontend/src/styles/index.css */
+:root {
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: #213547;
+  background-color: #f8f8f8;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  direction: rtl; /* כיווניות מימין לשמאל */
+  text-align: right; /* יישור טקסט לימין */
+}
+
+/* כללי פריסה בסיסיים */
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+h1 {
+  font-size: 2em;
+  line-height: 1.1;
+  color: #333;
+}
+
+/* כללי כפתורים וטפסים בסיסיים */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.25s;
+  background-color: #4CAF50; /* ירוק */
+  color: white;
+}
+
+input[type="text"], input[type="file"], textarea {
+    padding: 10px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    width: 100%;
+    text-align: right;
+}
+
+.error {
+    color: red;
+    font-size: 0.9em;
+}
+
+/* סגנון לוגין/מסכים */
+.screen-container {
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+}

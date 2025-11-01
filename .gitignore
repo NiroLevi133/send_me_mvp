@@ -1,0 +1,17 @@
+# Python / Environment
+__pycache__/
+*.pyc
+.venv
+venv
+.env # קובץ משתני סביבה לוקאליים
+db.sqlite3 # אם נשתמש ב-SQLite לבדיקות
+/backend/instance/
+
+# IDE files (VSCode, Pycharm, etc)
+.vscode/
+.idea/
+
+# Node/Frontend
+node_modules
+/frontend/dist
+/frontend/build
