@@ -15,6 +15,9 @@ RUN npm install
 # השורה הבאה מעתיקה את כל הקבצים מתוך ./Frontend לתוך /app
 COPY . .
 
+COPY public/index.html .
+RUN npm run build
+
 # הגדרה הכרחית לנתיב ה-API בזמן הבנייה (מתקן את בעיית ה-URL)
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
