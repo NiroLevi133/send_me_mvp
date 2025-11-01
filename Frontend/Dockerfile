@@ -1,5 +1,3 @@
-# /send_me_mvp/frontend/Dockerfile.frontend
-
 # ------------------------------------
 # שלב 1: בנייה (Build Stage) - משתמש ב-Nodejs
 # ------------------------------------
@@ -12,9 +10,17 @@ COPY package*.json ./
 # התקנת תלויות
 RUN npm install
 
-# העתקת קוד המקור והקונפיגורציה של Vite
+# העתקת קבצי המקור והקונפיגורציה של Vite
+# כיוון שאתה מריץ את הפקודה gcloud build submit מחוץ לתיקיית Frontend,
+# השורה הבאה מעתיקה את כל הקבצים מתוך ./Frontend לתוך /app
 COPY . .
+
+# הגדרה הכרחית לנתיב ה-API בזמן הבנייה (מתקן את בעיית ה-URL)
+ARG REACT_APP_API_URL
+ENV REACT_APP_API_URL=${REACT_APP_API_URL}
+
 # פקודת בניית הפרודקשן של Vite (יוצרת את תיקיית 'dist')
+# השלב הזה יצליח כעת כי index.html זמין בבסיס ה-Context.
 RUN npm run build
 
 # ------------------------------------
