@@ -10,20 +10,16 @@ COPY package*.json ./
 # התקנת תלויות
 RUN npm install
 
-# העתקת קבצי המקור והקונפיגורציה של Vite
-# כיוון שאתה מריץ את הפקודה gcloud build submit מחוץ לתיקיית Frontend,
-# השורה הבאה מעתיקה את כל הקבצים מתוך ./Frontend לתוך /app
+# העתקת קוד המקור והקונפיגורציה של Vite
 COPY . .
-
+# השורה הזו מתקנת את בעיית index.html
 COPY public/index.html .
-RUN npm run build
 
-# הגדרה הכרחית לנתיב ה-API בזמן הבנייה (מתקן את בעיית ה-URL)
+# הגדרה הכרחית לנתיב ה-API בזמן הבנייה
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 
 # פקודת בניית הפרודקשן של Vite (יוצרת את תיקיית 'dist')
-# השלב הזה יצליח כעת כי index.html זמין בבסיס ה-Context.
 RUN npm run build
 
 # ------------------------------------
