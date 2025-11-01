@@ -1,22 +1,23 @@
 # /send_me_mvp/backend/requirements.txt
-
 # Core FastAPI and ASGI Server
-fastapi
-uvicorn[standard]
-pydantic
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
 
 # Database: PostgreSQL (for Cloud SQL)
-# נשתמש ב-asyncpg לפיתוח async, אך עבור MVP נתחיל עם psycopg2-binary
-sqlalchemy # ORM/SQL Toolkit
-psycopg2-binary # מנהל התקן ל-PostgreSQL
+sqlalchemy==2.0.29
+psycopg2-binary==2.9.9
 
-# LLM Engine
-openai
+# LLM Engine: החלפת OpenAI ב-Google Gemini
+google-genai==0.6.0
 
 # Google Cloud Services
-google-cloud-storage # GCS (לאחסון קורות חיים)
-google-cloud-vision # OCR (למודעות משרה)
-google-auth-oauthlib # נדרש ל-Gmail API OAuth Flow
+google-cloud-storage==2.16.0 # GCS (לאחסון קורות חיים)
+google-cloud-vision==3.7.0 # OCR (למודעות משרה)
+
+# Gmail API - נשתמש בספרייה הרשמית
+google-api-python-client==2.127.0
+google-auth-oauthlib==1.2.0
 
 # Utilities
-python-dotenv # לטעינת משתני סביבה לוקאלית
+python-dotenv==1.0.1 # לטעינת משתני סביבה לוקאלית

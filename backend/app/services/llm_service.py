@@ -1,44 +1,90 @@
 # /send_me_mvp/backend/app/services/llm_service.py
 import json
 import os
-from openai import OpenAI
+from google import genai
+from google.genai import types
 from app.schemas import OnboardingCombinedOutput, JobData
 from typing import Dict, Any, List
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") 
-CLIENT = OpenAI(api_key=OPENAI_API_KEY)
+# Gemini API Key יקרא ממשתנה הסביבה GEMINI_API_KEY
+# חובה להגדיר משתנה סביבה זה ב-Cloud Run
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
+MODEL_NAME = "gemini-2.5-flash"
 
-# --- פרומפט 1: פירוק קו"ח ויצירת שאלות (כבר נכתב, משלים כאן את הפונקציה) ---
+# --- אתחול Gemini Client ---
+# ה-Client מוצא אוטומטית את המפתח ממשתנה הסביבה GEMINI_API_KEY
+try:
+    CLIENT = genai.Client(api_key=GEMINI_API_KEY)
+except Exception as e:
+    # טיפול באתחול אם המפתח חסר (בפיתוח מקומי ללא מפתח)
+    print(f"Gemini Client initialization error: {e}")
+    CLIENT = None # נגדיר ל-None כדי למנוע קריסה מיידית
+
+
+# --- פרומפט 1: פירוק קו"ח ויצירת שאלות ---
 def create_onboarding_prompt(resume_text: str) -> str:
-    # ... (הקוד כבר נכתב בשלב הקודם) ...
+    """יוצר פרומפט ל-Gemini לפירוק קורות חיים וגנרציה של שאלות בפורמט JSON."""
+    
     return f"""
-    ... (פרומפט LLM לפירוק קו"ח ויצירת שאלות ב-JSON) ...
+    אתה מומחה גיוס המנתח קורות חיים.
+    המטרה: 
+    1. לחלץ נתונים קריטיים על המועמד: שם, מייל, סיכום ניסיון (2-3 משפטים) ורשימת טכנולוגיות מרכזיות (מערך).
+    2. לייצר 4-5 שאלות מיקוד (Focus Questions) מותאמות אישית, שמטרתן לחלץ "הדגשים" (Highlights) שניתן לשלב במייל הגשת מועמדות. לכל שאלה, הצע 3-4 תשובות אפשריות.
+
+    הקפד להחזיר רק JSON תקין (Raw JSON) לפי הסכימה הבאה:
+    {{
+        "profile_data": {{
+            "name": "שם המועמד",
+            "email": "אימייל",
+            "experience_summary": "סיכום ניסיון",
+            "technologies": ["טכנולוגיה 1", "טכנולוגיה 2"]
+        }},
+        "questions": [
+            {{
+                "q": "השאלה הממוקדת",
+                "options": [
+                    {{"text": "הסבר אופציה 1", "value": "הדגש שיש לשלב במייל (קצר)"}},
+                    {{"text": "הסבר אופציה 2", "value": "הדגש שיש לשלב במייל (קצר)"}}
+                ]
+            }}
+            // ... שאר השאלות
+        ]
+    }}
+
+    ---
+    קורות חיים גולמיים:
+    {resume_text}
+    ---
     """
 
 async def process_resume_and_generate_questions(resume_text: str) -> OnboardingCombinedOutput:
-    # ... (הקוד כבר נכתב בשלב הקודם) ...
+    if not CLIENT:
+        return OnboardingCombinedOutput(profile_data={"name": "חסר", "email": "error@sendme.com", "experience_summary": "שגיאה: חסר GEMINI_API_KEY", "technologies": []}, questions=[])
+        
     prompt = create_onboarding_prompt(resume_text)
     
     try:
-        completion = CLIENT.chat.completions.create(
-            model="gpt-4o-mini",
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": "אתה מחזיר JSON תקין לפי המבנה שסופק."},
-                {"role": "user", "content": prompt}
-            ]
+        response = CLIENT.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json", # דורש שהפלט יהיה JSON תקין
+            ),
         )
-        json_data = json.loads(completion.choices[0].message.content)
+        
+        # Gemini מחזיר את ה-JSON כ-response.text
+        json_data = json.loads(response.text)
         return OnboardingCombinedOutput(**json_data)
+        
     except Exception as e:
-        # טיפול בשגיאות
-        return OnboardingCombinedOutput(profile_data={"name": "שגיאה", "email": "error@sendme.com", "experience_summary": "שגיאת פירוק קו\"ח", "technologies": []}, questions=[])
+        print(f"Error calling Gemini for resume processing: {e}")
+        return OnboardingCombinedOutput(profile_data={"name": "שגיאה", "email": "error@sendme.com", "experience_summary": "שגיאת פירוק קו\"ח עקב כשל AI", "technologies": []}, questions=[])
 
-# --- פרומפט 2: יצירת פסקה מותאמת אישית (השלמה) ---
+
+# --- פרומפט 2: יצירת פסקה מותאמת אישית ---
 def create_paragraph_prompt(user_data: Dict[str, Any], job_data: JobData) -> str:
     """יוצר פרומפט לכתיבת הפסקה המותאמת אישית."""
     
-    # עיבוד נתונים מה-DB עבור הפרומפט
     highlights_str = "\n- ".join([t['content'] for t in user_data.get('targets', []) if t['type'] == 'highlight'])
     requirements_str = "\n- ".join(job_data.requirements)
     
@@ -49,6 +95,8 @@ def create_paragraph_prompt(user_data: Dict[str, Any], job_data: JobData) -> str
     1. להתמקד ב-2-3 הדרישות העיקריות מהמודעה.
     2. לשלב לפחות אחת מההדגשות המקצועיות ("Highlights") של המועמד.
     3. להיות קולעת, מקצועית וכתובה בעברית רהוטה.
+    
+    החזר אך ורק את הפסקה המותאמת.
 
     ---
     ## נתוני קלט:
@@ -60,29 +108,27 @@ def create_paragraph_prompt(user_data: Dict[str, Any], job_data: JobData) -> str
     - דרישות המשרה (חובה להתייחס):
     {requirements_str}
     ---
-    
-    החזר אך ורק את הפסקה המותאמת.
     """
 
 async def generate_custom_paragraph(user_data: Dict[str, Any], job_data: JobData) -> str:
-    """שולח את הפרומפט ליצירת פסקה ל-OpenAI."""
+    if not CLIENT:
+        return "אנו מתנצלים, אירעה שגיאה: חסר GEMINI_API_KEY."
+
     prompt = create_paragraph_prompt(user_data, job_data)
     
     try:
-        completion = CLIENT.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "אתה כותב קריירה מומחה. החזר רק את הפסקה."},
-                {"role": "user", "content": prompt}
-            ]
+        response = CLIENT.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
         )
-        return completion.choices[0].message.content.strip()
+        return response.text.strip()
     except Exception as e:
-        print(f"Error calling OpenAI for paragraph generation: {e}")
-        return "אנו מתנצלים, אירעה שגיאה ביצירת הפסקה. אנא נסה שוב."
+        print(f"Error calling Gemini for paragraph generation: {e}")
+        return "אנו מתנצלים, אירעה שגיאה ביצירת הפסקה ע\"י Gemini. אנא נסה שוב."
+
 
 async def extract_job_data_with_llm(job_ad_text: str) -> JobData:
-    """מחלץ נתוני משרה קריטיים מטקסט באמצעות LLM."""
-    # פרומפט LLM לחילוץ JobData יוכנס כאן.
+    """מחלץ נתוני משרה קריטיים מטקסט באמצעות LLM (MVP - דאטא מדומה)."""
+    # ... (פונקציה זו נשארה כפי שהיא מהקוד המקורי, מאחר שהפרומפט נשאר דומה)
     # לצורך MVP נחזיר דאטא מדומה:
     return JobData(job_title="מפתח פול-סטאק", target_email="hr@mockcompany.com", requirements=["Python", "FastAPI", "React"])
